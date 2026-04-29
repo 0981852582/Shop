@@ -1,0 +1,330 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Quản lý công việc</title>
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://npmcdn.com/flatpickr/dist/themes/material_blue.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://npmcdn.com/flatpickr/dist/l10n/vn.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; margin: 20px; background-color: #f4f7f6; }
+        #calendar { max-width: 1100px; margin: 0 auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+        .fc-event { cursor: pointer; padding: 4px; border: none !important; border-radius: 4px !important; }
+        .task-item { display: flex; align-items: center; gap: 5px; width: 100%; overflow: hidden; }
+        .task-checkbox { cursor: pointer; width: 14px; height: 14px; margin: 0; flex-shrink: 0; }
+        .task-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-grow: 1; font-size: 0.9em; font-weight: 500; }
+        .task-title.completed { text-decoration: line-through; opacity: 0.7; }
+        
+        .modal { display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
+        .modal-content { background: white; margin: 10% auto; padding: 25px; border-radius: 10px; width: 380px; position: relative; }
+        .close-btn { position: absolute; right: 20px; top: 15px; font-size: 28px; cursor: pointer; color: #888; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .form-group input[type="text"] { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
+        .form-group input[readonly] { background-color: #ffffff !important; cursor: pointer; }
+        .save-btn { width: 100%; padding: 12px; background: #2ecc71; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        
+        #completed-row { display: none; margin-top: 10px; align-items: center; gap: 8px; }
+        .is-edit #completed-row { display: flex; }
+
+        .status-preview { 
+            padding: 10px; 
+            border-radius: 6px; 
+            text-align: center; 
+            font-weight: bold; 
+            margin-bottom: 15px;
+            font-size: 0.9em;
+            border: 1px solid #ddd;
+        }
+
+        .fc-day-past { background-color: #e0e0e0 !important; opacity: 0.8; }
+    </style>
+</head>
+<body>
+
+<div id="taskModal" class="modal">
+    <div class="modal-content">
+        <span class="close-btn">&times;</span>
+        <h3 id="modalTitle">⏰ Thêm công việc</h3>
+        
+        <div id="statusPreview" class="status-preview">Đang tính toán trạng thái...</div>
+
+        <form id="taskForm">
+            <input type="hidden" id="m_id">
+            <div class="form-group">
+                <label>Tên công việc:</label>
+                <input type="text" id="m_title" required>
+            </div>
+            <div class="form-group">
+                <label>Bắt đầu:</label>
+                <input type="text" id="m_start" required readonly>
+            </div>
+            <div class="form-group">
+                <label>Kết thúc:</label>
+                <input type="text" id="m_end" required readonly>
+            </div>
+            <div class="form-group" id="completed-row">
+                <input type="checkbox" id="m_completed">
+                <label for="m_completed" style="margin-bottom:0">Đã hoàn thành</label>
+            </div>
+            <button type="submit" class="save-btn">Lưu thông tin</button>
+        </form>
+    </div>
+</div>
+
+<div id="calendar"></div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const modal = document.getElementById('taskModal');
+        const taskForm = document.getElementById('taskForm');
+        const statusPreview = document.getElementById('statusPreview');
+        const mCompleted = document.getElementById('m_completed');
+        
+        const pickerCfg = { 
+            enableTime: true, 
+            time_24hr: true, 
+            dateFormat: "Y-m-d H:i:S", 
+            locale: "vn", 
+            allowInput: false,
+            minDate: "today" 
+        };
+
+        const parseDateLocal = (str) => {
+            if(!str) return new Date();
+            const t = str.split(/[- :]/);
+            return new Date(t[0], t[1]-1, t[2], t[3] || 0, t[4] || 0, t[5] || 0);
+        };
+
+        const formatToSQL = (date) => {
+            if (!date) return "";
+            const d = new Date(date);
+            const pad = (n) => String(n).padStart(2, '0');
+            return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+        };
+
+        function updateStatusPreview() {
+            const now = new Date().getTime();
+            const startVal = startPicker.selectedDates[0];
+            const endVal = endPicker.selectedDates[0];
+            const isDone = mCompleted.checked;
+
+            if (!startVal || !endVal) return;
+
+            const start = startVal.getTime();
+            const end = endVal.getTime();
+
+            if (isDone) {
+                statusPreview.style.backgroundColor = '#add8e6';
+                statusPreview.style.color = '#000';
+                statusPreview.innerText = "Trạng thái: Đã hoàn thành";
+            } else if (now > end) {
+                statusPreview.style.backgroundColor = '#ff4d4d';
+                statusPreview.style.color = '#fff';
+                statusPreview.innerText = "Trạng thái: Quá hạn";
+            } else if (now >= start) {
+                statusPreview.style.backgroundColor = '#90ee90'; // Đã sửa mã màu lỗi
+                statusPreview.style.color = '#000';
+                statusPreview.innerText = "Trạng thái: Đang xử lý";
+            } else {
+                statusPreview.style.backgroundColor = '#fff9c4';
+                statusPreview.style.color = '#000';
+                statusPreview.innerText = "Trạng thái: Chưa đến hạn";
+            }
+        }
+
+        const startPicker = flatpickr("#m_start", { 
+            ...pickerCfg, 
+            onChange: (selectedDates) => {
+                endPicker.set("minDate", selectedDates[0]);
+                updateStatusPreview();
+            }
+        });
+
+        const endPicker = flatpickr("#m_end", {
+            ...pickerCfg,
+            onChange: () => {
+                updateStatusPreview();
+            }
+        });
+
+        mCompleted.addEventListener('change', updateStatusPreview);
+
+        const calendar = new FullCalendar.Calendar(document.getElementById('calendar'), {
+            initialView: 'dayGridMonth',
+            locale: 'vi',
+            timeZone: 'local',
+            selectable: true,
+            editable: true,
+            events: '/tasks',
+
+            dayCellDidMount: function(info) {
+                const today = new Date();
+                today.setHours(0,0,0,0);
+                if (info.date < today) {
+                    info.el.classList.add('fc-day-past');
+                }
+            },
+
+            eventDataTransform: function(eventData) {
+            const nowFull = new Date();
+            const nowTime = nowFull.getTime();
+            
+            // Tạo mốc thời gian chỉ có ngày (00:00:00) để so sánh trạng thái "Trong ngày"
+            const todayDate = new Date(nowFull.getFullYear(), nowFull.getMonth(), nowFull.getDate()).getTime();
+            
+            const startDateObj = parseDateLocal(eventData.start);
+            const endDateObj = parseDateLocal(eventData.end);
+            
+            const start = startDateObj.getTime();
+            const end = endDateObj.getTime();
+            
+            // Lấy mốc ngày bắt đầu và kết thúc (bỏ qua giờ phút giây)
+            const startDay = new Date(startDateObj.getFullYear(), startDateObj.getMonth(), startDateObj.getDate()).getTime();
+            const endDay = new Date(endDateObj.getFullYear(), endDateObj.getMonth(), endDateObj.getDate()).getTime();
+
+            const isDone = eventData.is_completed === true || 
+                           eventData.is_completed === 1 || 
+                           eventData.is_completed === "True";
+
+            if (isDone) {
+                eventData.backgroundColor = '#add8e6';
+                eventData.textColor = '#000000';
+            } 
+            // Ưu tiên hiển thị Xanh lá nếu ngày hiện tại nằm trong khoảng từ ngày bắt đầu đến hết ngày kết thúc
+            else if (todayDate >= startDay && todayDate <= endDay) {
+                eventData.backgroundColor = '#90ee90'; 
+                eventData.textColor = '#000000';
+            }
+            // Nếu đã qua hẳn ngày kết thúc thì mới báo Đỏ (Quá hạn)
+            else if (nowTime > end) {
+                eventData.backgroundColor = '#ff4d4d';
+                eventData.textColor = '#ffffff';
+            }
+            // Nếu chưa tới ngày bắt đầu
+            else if (nowTime < start) {
+                eventData.backgroundColor = '#fff9c4';
+                eventData.textColor = '#000000';
+            }
+            return eventData;
+        },
+
+            eventContent: function(arg) {
+                const isDone = arg.event.extendedProps.is_completed === true || 
+                               arg.event.extendedProps.is_completed === 1 || 
+                               arg.event.extendedProps.is_completed === "True";
+                let container = document.createElement('div');
+                container.className = 'task-item';
+                
+                let cb = document.createElement('input');
+                cb.type = 'checkbox';
+                cb.className = 'task-checkbox';
+                cb.checked = isDone;
+                cb.onclick = async (e) => {
+                    e.stopPropagation();
+                    await fetch('/toggle-complete', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ id: arg.event.id, is_completed: cb.checked })
+                    });
+                    calendar.refetchEvents();
+                };
+
+                let title = document.createElement('span');
+                title.className = `task-title ${isDone ? 'completed' : ''}`;
+                title.innerText = arg.event.title;
+
+                container.append(cb, title);
+                return { domNodes: [container] };
+            },
+
+            eventClick: function(info) {
+                modal.classList.add('is-edit');
+                document.getElementById('modalTitle').innerText = "📝 Sửa công việc";
+                modal.style.display = 'block';
+                document.getElementById('m_id').value = info.event.id;
+                document.getElementById('m_title').value = info.event.title;
+                
+                const isCompleted = info.event.extendedProps.is_completed === true || 
+                                   info.event.extendedProps.is_completed === 1 || 
+                                   info.event.extendedProps.is_completed === "True";
+                mCompleted.checked = isCompleted;
+                
+                startPicker.set("minDate", null); 
+                startPicker.setDate(info.event.start);
+                startPicker.set("minDate", "today");
+
+                endPicker.set("minDate", null);
+                endPicker.setDate(info.event.end || info.event.start);
+                endPicker.set("minDate", info.event.start);
+
+                updateStatusPreview();
+            },
+
+            select: function(info) {
+                const selectedDate = new Date(info.start);
+                const today = new Date();
+                today.setHours(0,0,0,0);
+
+                if (selectedDate < today) {
+                    calendar.unselect();
+                    alert("Không thể chọn ngày trong quá khứ!");
+                    return;
+                }
+
+                modal.classList.remove('is-edit');
+                document.getElementById('modalTitle').innerText = "⏰ Thêm công việc";
+                taskForm.reset();
+                document.getElementById('m_id').value = "";
+                modal.style.display = 'block';
+                
+                let dStart = new Date(info.start); dStart.setHours(0,0,0);
+                let dEnd = new Date(info.start); dEnd.setHours(23,59,59);
+                startPicker.setDate(dStart);
+                endPicker.setDate(dEnd);
+
+                updateStatusPreview();
+            }
+        });
+
+        calendar.render();
+
+        document.querySelector('.close-btn').onclick = () => modal.style.display = 'none';
+
+        taskForm.onsubmit = async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('m_id').value;
+            const startObj = startPicker.selectedDates[0];
+            const endObj = endPicker.selectedDates[0];
+
+            if (endObj < startObj) {
+                alert("Ngày kết thúc không được nhỏ hơn ngày bắt đầu!");
+                return;
+            }
+
+            const response = await fetch(id ? '/update-task' : '/add', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    id,
+                    title: document.getElementById('m_title').value,
+                    start_date: formatToSQL(startObj),
+                    due_date: formatToSQL(endObj),
+                    is_completed: mCompleted.checked
+                })
+            });
+            
+            if (response.ok) {
+                modal.style.display = 'none';
+                calendar.refetchEvents();
+            } else {
+                const errorMsg = await response.text();
+                alert(errorMsg);
+            }
+        };
+    });
+</script>
+</body>
+</html>
