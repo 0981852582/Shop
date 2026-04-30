@@ -1,61 +1,73 @@
-﻿const nodemailer = require('nodemailer');
-const cron = require('node-cron');
+﻿const express = require('express');
+const { Pool } = require('pg'); 
+const bodyParser = require('body-parser');
+const path = require('path');
 
-// 1. Cấu hình gửi mail (Sử dụng Gmail)
-const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-        user: 'truongquoctrong231194@gmail.com', // Email dùng để gửi (có thể là mail của bạn)
-        pass: 'hinz pwdd qdur dxgc' // Mật khẩu ứng dụng (App Password) tạo từ Google Account
-    }
+const app = express();
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+
+const pool = new Pool({
+    user: 'avnadmin',
+    password: process.env.DB_PASSWORD || 'AVNS_QmkOm-kAB2jMARLl5TQ',
+    host: 'trongtq-truongquoctrong231194-cc9f.h.aivencloud.com',
+    port: 19350,
+    database: 'defaultdb',
+    ssl: { rejectUnauthorized: false }
 });
 
-// 2. Hàm xử lý logic nhắc nhở
-const sendDailyReminder = async () => {
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+app.get('/tasks', async (req, res) => {
     try {
-        const now = new Date();
-        // Lấy tất cả task chưa hoàn thành từ Database
         const result = await pool.query(`
-            SELECT title, due_date, start_date 
-            FROM tasks 
-            WHERE is_completed = false
-        `);
-
-        let overdue = [];
-        let processing = [];
-
-        result.rows.forEach(task => {
-            const end = new Date(task.due_date);
-            const start = new Date(task.start_date);
-            if (now > end) overdue.push(task.title);
-            else if (now >= start) processing.push(task.title);
-        });
-
-        // Chỉ gửi mail nếu có task cần nhắc
-        if (overdue.length === 0 && processing.length === 0) return;
-
-        await transporter.sendMail({
-            from: '"Hệ thống Quản lý Công việc" <email_gui_tin_nhan@gmail.com>',
-            to: 'truongquoctrong231194@gmail.com',
-            subject: `🔔 Nhắc nhở công việc ngày ${now.toLocaleDateString('vi-VN')}`,
-            html: `
-                <h3>Danh sách công việc cần xử lý:</h3>
-                <p style="color: #e74c3c;"><b>⚠️ Quá hạn:</b> ${overdue.length ? overdue.join(', ') : 'Không có'}</p>
-                <p style="color: #2ecc71;"><b>⏳ Đang xử lý:</b> ${processing.length ? processing.join(', ') : 'Không có'}</p>
-                <br>
-                <p><i>Hệ thống tự động gửi lúc 08:00 sáng mỗi ngày.</i></p>
-            `
-        });
-        console.log('Đã gửi email nhắc nhở thành công!');
-    } catch (err) {
-        console.error('Lỗi khi gửi email:', err);
-    }
-};
-
-// 3. Lập lịch chạy tự động lúc 08:00 sáng mỗi ngày (Giờ Việt Nam)[cite: 31]
-cron.schedule('0 8 * * *', () => {
-    console.log('Bắt đầu gửi mail nhắc nhở định kỳ...');
-    sendDailyReminder();
-}, {
-    timezone: "Asia/Ho_Chi_Minh"
+            SELECT id, title, description, is_completed,
+            TO_CHAR(start_date, 'YYYY-MM-DD HH24:MI:SS') as start, 
+            TO_CHAR(due_date, 'YYYY-MM-DD HH24:MI:SS') as "end"
+            FROM tasks`);
+        res.json(result.rows);
+    } catch (err) { res.status(500).send(err.message); }
 });
+
+app.post('/add', async (req, res) => {
+    try {
+        const { title, description, start_date, due_date } = req.body;
+        await pool.query(
+            'INSERT INTO tasks (title, description, start_date, due_date, is_completed) VALUES ($1, $2, $3, $4, $5)',
+            [title, description, start_date, due_date, false]
+        );
+        res.sendStatus(200);
+    } catch (err) { res.status(500).send(err.message); }
+});
+
+app.post('/update-task', async (req, res) => {
+    try {
+        const { id, title, description, start_date, due_date, is_completed } = req.body;
+        await pool.query(
+            'UPDATE tasks SET title = $1, description = $2, start_date = $3, due_date = $4, is_completed = $5 WHERE id = $6',
+            [title, description, start_date, due_date, is_completed, id]
+        );
+        res.sendStatus(200);
+    } catch (err) { res.status(500).send(err.message); }
+});
+
+app.delete('/delete-task/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        await pool.query('DELETE FROM tasks WHERE id = $1', [id]);
+        res.sendStatus(200);
+    } catch (err) { res.status(500).send(err.message); }
+});
+
+app.post('/toggle-complete', async (req, res) => {
+    try {
+        const { id, is_completed } = req.body;
+        await pool.query('UPDATE tasks SET is_completed = $1 WHERE id = $2', [is_completed, id]);
+        res.sendStatus(200);
+    } catch (err) { res.status(500).send(err.message); }
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
