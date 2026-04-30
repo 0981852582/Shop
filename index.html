@@ -14,11 +14,9 @@
         #calendar { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); min-height: 500px; }
         .goto-controls { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; background: white; padding: 10px 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
         .goto-controls input { padding: 6px 12px; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; width: 150px; text-align: center; }
-        
         #loading-overlay { display: flex; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255, 255, 255, 0.85); z-index: 100; justify-content: center; align-items: center; flex-direction: column; border-radius: 12px; pointer-events: all; }
         .main-spinner { width: 50px; height: 50px; border: 5px solid #f3f3f3; border-top: 5px solid #3498db; border-radius: 50%; animation: spin 1s linear infinite; }
         
-        /* Cập nhật khoảng cách 5px giữa các task[cite: 27] */
         .fc-event { 
             cursor: pointer; 
             padding: 4px; 
@@ -26,7 +24,16 @@
             border-radius: 4px !important; 
             position: relative; 
             margin-bottom: 5px !important; 
+            transition: background-color 0.2s;
         }
+
+        /* Hiệu ứng task khi được focus[cite: 29] */
+        .fc-event-focus {
+            background-color: #FFC0CB !important;
+            border: 1px solid #ff8da1 !important;
+        }
+        .fc-event-focus .task-title { color: #000 !important; }
+        .fc-event-focus .btn-delete { color: #000 !important; }
 
         .task-item { display: flex; align-items: center; gap: 5px; width: 100%; overflow: hidden; }
         .task-checkbox { cursor: pointer; width: 14px; height: 14px; flex-shrink: 0; }
@@ -45,7 +52,7 @@
         .form-group input[type="text"], .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-family: inherit; }
         .save-btn { width: 100%; padding: 12px; background: #2ecc71; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; display: flex; justify-content: center; align-items: center; gap: 10px; }
         .spinner { width: 18px; height: 18px; border: 3px solid rgba(255,255,255,0.3); border-top: 3px solid #fff; border-radius: 50%; animation: spin 0.8s linear infinite; display: none; }
-        .inline-spinner { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3); border-top: 2px solid #333; border-radius: 50%; animation: spin 0.8s linear infinite; display: none; flex-shrink: 0; }
+        .inline-spinner { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3); border-top: 2px solid #fff; border-radius: 50%; animation: spin 0.8s linear infinite; display: none; flex-shrink: 0; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
@@ -203,6 +210,10 @@
             },
 
             eventClick: function(info) {
+                // Xử lý Focus màu hồng[cite: 29]
+                document.querySelectorAll('.fc-event').forEach(el => el.classList.remove('fc-event-focus'));
+                info.el.classList.add('fc-event-focus');
+
                 const now = new Date();
                 const start = new Date(info.event.start);
                 const isDone = info.event.extendedProps.is_completed;
@@ -222,12 +233,15 @@
             },
 
             select: function(info) {
+                // Khi click vùng trống thì bỏ focus task cũ[cite: 29]
+                document.querySelectorAll('.fc-event').forEach(el => el.classList.remove('fc-event-focus'));
+
                 const selectedDate = new Date(info.start);
                 const today = new Date();
                 today.setHours(0,0,0,0);
                 if (selectedDate < today) {
                     calendar.unselect();
-                    alert("Không thể tạo công việc cho những ngày trong quá khứ!");
+                    alert("Không thể tạo công việc cho quá khứ!");
                     return;
                 }
                 
