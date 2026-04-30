@@ -30,14 +30,13 @@
         .save-btn { width: 100%; padding: 12px; background: #2ecc71; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; display: flex; justify-content: center; align-items: center; gap: 10px; }
         .save-btn:disabled { background: #95a5a6; cursor: not-allowed; }
 
-        /* Hiệu ứng Loading Spinner */
         .spinner {
             width: 18px; height: 18px;
             border: 3px solid rgba(255,255,255,0.3);
             border-top: 3px solid #fff;
             border-radius: 50%;
             animation: spin 0.8s linear infinite;
-            display: none; /* Mặc định ẩn */
+            display: none;
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
@@ -153,8 +152,18 @@
                 taskForm.reset();
                 document.getElementById('m_id').value = "";
                 modal.style.display = 'block';
-                startPicker.setDate(info.start);
-                endPicker.setDate(info.start);
+                
+                // Mặc định ngày hiện tại[cite: 1]
+                let dStart = new Date(info.start);
+                dStart.setHours(0,0,0);
+                
+                // Mặc định ngày bắt đầu cộng 1 ngày và giờ 23:59:59[cite: 1]
+                let dEnd = new Date(info.start);
+                dEnd.setDate(dEnd.getDate() + 1); 
+                dEnd.setHours(23, 59, 59);
+
+                startPicker.setDate(dStart);
+                endPicker.setDate(dEnd);
             }
         });
 
@@ -163,8 +172,6 @@
 
         taskForm.onsubmit = async (e) => {
             e.preventDefault();
-            
-            // BẮT ĐẦU LOADING
             submitBtn.disabled = true;
             loader.style.display = "block";
             btnText.innerText = "Đang lưu...";
@@ -191,7 +198,6 @@
             } catch (err) {
                 alert("Lỗi kết nối server!");
             } finally {
-                // KẾT THÚC LOADING[cite: 1]
                 submitBtn.disabled = false;
                 loader.style.display = "none";
                 btnText.innerText = "Lưu thông tin";
