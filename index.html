@@ -119,8 +119,8 @@
                     eventData.backgroundColor = '#3498db'; // Blue: Hoàn thành
                     eventData.textColor = '#fff';
                 } else if (now < start) {
-                    eventData.backgroundColor = '#f1c40f'; // Yellow: Chưa bắt đầu[cite: 18]
-                    eventData.textColor = '#000';
+                    eventData.backgroundColor = '#9C9C9C'; // Gray: Chưa bắt đầu
+                    eventData.textColor = '#fff';
                 } else if (now > end) {
                     eventData.backgroundColor = '#e74c3c'; // Red: Quá hạn
                     eventData.textColor = '#fff';
@@ -135,7 +135,7 @@
                 const isDone = arg.event.extendedProps.is_completed;
                 const now = new Date();
                 const start = new Date(arg.event.start);
-                const isNotStarted = now < start && !isDone; // Kiểm tra task chưa bắt đầu[cite: 18]
+                const isNotStarted = now < start && !isDone; 
                 
                 let container = document.createElement('div');
                 container.className = 'task-item';
@@ -146,7 +146,6 @@
                 cb.className = 'task-checkbox';
                 cb.checked = isDone;
                 
-                // Khóa update trạng thái nếu chưa bắt đầu[cite: 18]
                 if (isNotStarted) {
                     cb.disabled = true;
                     cb.title = "Công việc chưa tới giờ bắt đầu";
@@ -154,7 +153,6 @@
 
                 let inlineLoader = document.createElement('div');
                 inlineLoader.className = 'inline-spinner';
-                if (isNotStarted) inlineLoader.style.borderTopColor = '#000';
 
                 cb.onclick = async (e) => {
                     e.stopPropagation();
@@ -177,7 +175,7 @@
                 };
 
                 let title = document.createElement('span');
-                title.className = `task-title ${isDone ? 'completed' : ''} ${isNotStarted ? 'black-text' : ''}`;
+                title.className = `task-title ${isDone ? 'completed' : ''}`;
                 title.innerText = arg.event.title;
 
                 let delBtn = document.createElement('span');
@@ -208,7 +206,6 @@
                 const cbModal = document.getElementById('m_completed');
                 cbModal.checked = info.event.extendedProps.is_completed;
                 
-                // Khóa checkbox trong modal nếu chưa bắt đầu[cite: 18]
                 if (isNotStarted) {
                     cbModal.disabled = true;
                     cbModal.parentElement.title = "Chưa thể hoàn thành công việc này";
