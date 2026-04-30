@@ -21,6 +21,9 @@
         .fc-event:hover .btn-delete { display: block; }
         .btn-delete:hover { color: #b30000; transform: scale(1.2); }
 
+        /* Làm mờ các ô ngày quá khứ[cite: 3] */
+        .fc-day-past { background-color: #f0f0f0 !important; opacity: 0.6; cursor: not-allowed; }
+
         .modal { display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
         .modal-content { background: white; margin: 5% auto; padding: 25px; border-radius: 10px; width: 400px; position: relative; }
         .close-btn { position: absolute; right: 20px; top: 15px; font-size: 28px; cursor: pointer; color: #888; }
@@ -87,7 +90,14 @@
         const loader = document.getElementById('loader');
         const btnText = document.getElementById('btnText');
         
-        const pickerCfg = { enableTime: true, time_24hr: true, dateFormat: "Y-m-d H:i:S", locale: "vn" };
+        // Cấu hình minDate để không chọn được ngày cũ trong lịch chọn[cite: 3]
+        const pickerCfg = { 
+            enableTime: true, 
+            time_24hr: true, 
+            dateFormat: "Y-m-d H:i:S", 
+            locale: "vn",
+            minDate: "today" 
+        };
         const startPicker = flatpickr("#m_start", pickerCfg);
         const endPicker = flatpickr("#m_end", pickerCfg);
 
@@ -144,20 +154,36 @@
                 document.getElementById('m_title').value = info.event.title;
                 document.getElementById('m_description').value = info.event.extendedProps.description || "";
                 document.getElementById('m_completed').checked = info.event.extendedProps.is_completed;
+                
+                // Khi sửa thì cho phép hiển thị ngày cũ nhưng không cho chọn ngày mới là quá khứ[cite: 3]
+                startPicker.set("minDate", null); 
                 startPicker.setDate(info.event.start);
+                startPicker.set("minDate", "today");
+
+                endPicker.set("minDate", null);
                 endPicker.setDate(info.event.end || info.event.start);
+                endPicker.set("minDate", "today");
             },
 
             select: function(info) {
+                const selectedDate = new Date(info.start);
+                const today = new Date();
+                today.setHours(0,0,0,0);
+
+                // Kiểm tra nếu ngày chọn nhỏ hơn hôm nay[cite: 3]
+                if (selectedDate < today) {
+                    calendar.unselect();
+                    alert("Không thể tạo công việc cho những ngày trong quá khứ!");
+                    return;
+                }
+
                 taskForm.reset();
                 document.getElementById('m_id').value = "";
                 modal.style.display = 'block';
                 
-                // Mặc định ngày hiện tại[cite: 1]
                 let dStart = new Date(info.start);
                 dStart.setHours(0,0,0);
                 
-                // Mặc định ngày bắt đầu cộng 1 ngày và giờ 23:59:59[cite: 1]
                 let dEnd = new Date(info.start);
                 dEnd.setDate(dEnd.getDate() + 1); 
                 dEnd.setHours(23, 59, 59);
