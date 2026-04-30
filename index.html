@@ -10,24 +10,35 @@
     <script src="https://npmcdn.com/flatpickr/dist/l10n/vn.js"></script>
     <style>
         body { font-family: 'Segoe UI', Arial, sans-serif; margin: 20px; background-color: #f4f7f6; }
-        #calendar { max-width: 1100px; margin: 0 auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+        #calendar { max-width: 1100px; margin: 0 auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); position: relative; }
+        
+        /* Hiệu ứng Loading toàn trang cho lịch */
+        #loading-overlay {
+            display: none;
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(255, 255, 255, 0.7);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            border-radius: 12px;
+        }
+        .main-spinner {
+            width: 50px; height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
         .fc-event { cursor: pointer; padding: 4px; border: none !important; border-radius: 4px !important; position: relative; }
         .task-item { display: flex; align-items: center; gap: 5px; width: 100%; overflow: hidden; }
         .task-checkbox { cursor: pointer; width: 14px; height: 14px; flex-shrink: 0; }
         .task-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-grow: 1; font-size: 0.9em; font-weight: 500; color: #fff; }
         .task-title.completed { text-decoration: line-through; opacity: 0.8; }
         
-        /* Chỉnh sửa dấu x lên trên 2px[cite: 10] */
-        .btn-delete { 
-            color: #fff; 
-            font-weight: bold; 
-            font-size: 18px; 
-            padding: 0 5px; 
-            cursor: pointer; 
-            margin-left: auto; 
-            display: none; 
-            transform: translateY(-2px); /* Dịch chuyển lên trên 2px */
-        }
+        .btn-delete { color: #fff; font-weight: bold; font-size: 18px; padding: 0 5px; cursor: pointer; margin-left: auto; display: none; transform: translateY(-2px); }
         .fc-event:hover .btn-delete { display: block; }
         .btn-delete:hover { transform: translateY(-2px) scale(1.2); }
 
@@ -48,6 +59,14 @@
     </style>
 </head>
 <body>
+
+<div id="calendar">
+    <!-- Overlay Loading cho lịch -->
+    <div id="loading-overlay">
+        <div class="main-spinner"></div>
+        <p style="margin-top: 10px; color: #3498db; font-weight: bold;">Đang tải dữ liệu...</p>
+    </div>
+</div>
 
 <div id="taskModal" class="modal">
     <div class="modal-content">
@@ -83,8 +102,6 @@
     </div>
 </div>
 
-<div id="calendar"></div>
-
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const modal = document.getElementById('taskModal');
@@ -92,10 +109,9 @@
         const submitBtn = document.getElementById('submitBtn');
         const loader = document.getElementById('loader');
         const btnText = document.getElementById('btnText');
+        const loadingOverlay = document.getElementById('loading-overlay');
         
-        const pickerCfg = { 
-            enableTime: true, time_24hr: true, dateFormat: "Y-m-d H:i:S", locale: "vn", minDate: "today" 
-        };
+        const pickerCfg = { enableTime: true, time_24hr: true, dateFormat: "Y-m-d H:i:S", locale: "vn", minDate: "today" };
         const startPicker = flatpickr("#m_start", pickerCfg);
         const endPicker = flatpickr("#m_end", pickerCfg);
 
@@ -106,6 +122,11 @@
             selectable: true,
             editable: true,
             
+            // Tự động kích hoạt khi bắt đầu/kết thúc tải dữ liệu từ API[cite: 11]
+            loading: function(isLoading) {
+                loadingOverlay.style.display = isLoading ? 'flex' : 'none';
+            },
+
             eventDataTransform: function(eventData) {
                 const now = new Date();
                 const end = new Date(eventData.end);
