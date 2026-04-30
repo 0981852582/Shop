@@ -16,12 +16,13 @@
         .goto-controls { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; background: white; padding: 10px 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
         .goto-controls input { padding: 6px 12px; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; width: 150px; text-align: center; }
         
-        /* Hiệu ứng Loading hiển thị mặc định khi trang web bắt đầu tải[cite: 20] */
+        /* Block-UI Overlay: Hiển thị mặc định để khóa giao diện[cite: 21] */
         #loading-overlay { 
-            display: flex; /* Đổi từ none sang flex[cite: 20] */
+            display: flex; 
             position: absolute; top: 0; left: 0; right: 0; bottom: 0; 
-            background: rgba(255, 255, 255, 0.8); z-index: 100; 
+            background: rgba(255, 255, 255, 0.85); z-index: 100; 
             justify-content: center; align-items: center; flex-direction: column; border-radius: 12px; 
+            pointer-events: all; /* Chặn mọi tương tác chuột bên dưới[cite: 21] */
         }
         .main-spinner { width: 50px; height: 50px; border: 5px solid #f3f3f3; border-top: 5px solid #3498db; border-radius: 50%; animation: spin 1s linear infinite; }
         
@@ -56,7 +57,7 @@
     <div id="calendar">
         <div id="loading-overlay">
             <div class="main-spinner"></div>
-            <p style="margin-top: 10px; color: #3498db; font-weight: bold;">Hệ thống đang khởi tạo...</p>
+            <p style="margin-top: 15px; color: #3498db; font-weight: bold;">Đang tải dữ liệu, vui lòng đợi...</p>
         </div>
     </div>
 </div>
@@ -116,7 +117,7 @@
             editable: true,
             headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,timeGridDay' },
             
-            // Xử lý loading khi chuyển tháng hoặc tải dữ liệu từ API[cite: 20]
+            // Xử lý Block-UI khi dữ liệu đang tải từ API[cite: 21]
             loading: function(isLoading) { 
                 loadingOverlay.style.display = isLoading ? 'flex' : 'none'; 
             },
@@ -158,9 +159,7 @@
                 cb.className = 'task-checkbox';
                 cb.checked = isDone;
                 
-                if (isNotStarted) {
-                    cb.disabled = true;
-                }
+                if (isNotStarted) cb.disabled = true;
 
                 let inlineLoader = document.createElement('div');
                 inlineLoader.className = 'inline-spinner';
@@ -231,11 +230,10 @@
             }
         });
 
-        // Khởi tạo xong thì render[cite: 20]
+        // Khởi tạo xong thì render[cite: 21]
         calendar.render();
         
-        // Ẩn lớp phủ loading ngay sau khi khởi tạo giao diện xong[cite: 20]
-        loadingOverlay.style.display = 'none';
+        // Block-UI sẽ tự động ẩn thông qua sự kiện 'loading' của FullCalendar bên trên[cite: 21]
 
         flatpickr("#goto-picker", {
             locale: "vn",
