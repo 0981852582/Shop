@@ -1,5 +1,5 @@
 ﻿const express = require('express');
-const { Pool } = require('pg'); // Thư viện đã cài bằng lệnh npm install pg
+const { Pool } = require('pg'); 
 const bodyParser = require('body-parser');
 const path = require('path');
 
@@ -7,10 +7,10 @@ const app = express();
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// Cấu hình kết nối lấy từ Aiven PostgreSQL của bạn
+// Cấu hình kết nối lấy từ biến môi trường (Environment Variables)
 const pool = new Pool({
     user: 'avnadmin',
-	password: process.env.DB_PASSWORD || 'AVNS_QmkOm-kAB2jMARLl5TQ',
+    password: process.env.DB_PASSWORD || 'AVNS_QmkOm-kAB2jMARLl5TQ',
     host: 'trongtq-truongquoctrong231194-cc9f.h.aivencloud.com',
     port: 19350,
     database: 'defaultdb',
@@ -21,7 +21,7 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// Lấy danh sách task
+// 1. Lấy danh sách task[cite: 2]
 app.get('/tasks', async (req, res) => {
     try {
         const result = await pool.query(`
@@ -33,7 +33,7 @@ app.get('/tasks', async (req, res) => {
     } catch (err) { res.status(500).send(err.message); }
 });
 
-// Thêm task mới
+// 2. Thêm task mới[cite: 2]
 app.post('/add', async (req, res) => {
     try {
         const { title, start_date, due_date } = req.body;
@@ -45,7 +45,28 @@ app.post('/add', async (req, res) => {
     } catch (err) { res.status(500).send(err.message); }
 });
 
-// Cập nhật trạng thái hoàn thành
+// 3. Cập nhật task (Sửa lỗi Cannot POST /update-task)
+app.post('/update-task', async (req, res) => {
+    try {
+        const { id, title, start_date, due_date, is_completed } = req.body;
+        await pool.query(
+            'UPDATE tasks SET title = $1, start_date = $2, due_date = $3, is_completed = $4 WHERE id = $5',
+            [title, start_date, due_date, is_completed, id]
+        );
+        res.sendStatus(200);
+    } catch (err) { res.status(500).send(err.message); }
+});
+
+// 4. Xóa task (Dùng cho dấu x góc phải)
+app.delete('/delete-task/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        await pool.query('DELETE FROM tasks WHERE id = $1', [id]);
+        res.sendStatus(200);
+    } catch (err) { res.status(500).send(err.message); }
+});
+
+// 5. Toggle hoàn thành nhanh[cite: 2]
 app.post('/toggle-complete', async (req, res) => {
     try {
         const { id, is_completed } = req.body;
@@ -54,4 +75,5 @@ app.post('/toggle-complete', async (req, res) => {
     } catch (err) { res.status(500).send(err.message); }
 });
 
-app.listen(3000, () => console.log("Server đang chạy tại http://localhost:3000"));  
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
