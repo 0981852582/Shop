@@ -74,7 +74,8 @@
                 <label>Kết thúc:</label>
                 <input type="text" id="m_end" required readonly>
             </div>
-            <div class="form-group" style="display:flex; align-items:center; gap:8px">
+            <!-- Đã thêm ID status-group để ẩn hiện[cite: 24, 25] -->
+            <div id="status-group" class="form-group" style="display:flex; align-items:center; gap:8px">
                 <input type="checkbox" id="m_completed">
                 <label for="m_completed" style="margin-bottom:0">Đã hoàn thành</label>
             </div>
@@ -95,6 +96,7 @@
         const btnText = document.getElementById('btnText');
         const loadingOverlay = document.getElementById('loading-overlay');
         const mCompleted = document.getElementById('m_completed');
+        const statusGroup = document.getElementById('status-group'); // Thêm tham chiếu group trạng thái[cite: 24, 25]
         
         const pickerCfg = { enableTime: true, time_24hr: true, dateFormat: "Y-m-d H:i:S", locale: "vn", minDate: "today" };
         const startPicker = flatpickr("#m_start", pickerCfg);
@@ -194,15 +196,15 @@
                 const now = new Date();
                 const start = new Date(info.event.start);
                 const isDone = info.event.extendedProps.is_completed;
-                const isNotStarted = now < start && !isDone; // Logic kiểm tra task chưa bắt đầu[cite: 24]
+                const isNotStarted = now < start && !isDone;
 
+                statusGroup.style.display = 'flex'; // Hiện checkbox khi chỉnh sửa[cite: 24, 25]
                 modal.style.display = 'block';
                 document.getElementById('m_id').value = info.event.id;
                 document.getElementById('m_title').value = info.event.title;
                 document.getElementById('m_description').value = info.event.extendedProps.description || "";
                 
                 mCompleted.checked = isDone;
-                // Khóa checkbox trạng thái trong modal nếu công việc chưa bắt đầu[cite: 24]
                 mCompleted.disabled = isNotStarted; 
                 
                 startPicker.setDate(info.event.start);
@@ -218,9 +220,11 @@
                     alert("Không thể tạo công việc cho quá khứ!");
                     return;
                 }
+                
+                statusGroup.style.display = 'none'; // Ẩn checkbox khi tạo mới[cite: 24, 25]
                 taskForm.reset();
                 document.getElementById('m_id').value = "";
-                mCompleted.disabled = false; // Luôn mở cho task mới[cite: 24]
+                mCompleted.disabled = false;
                 modal.style.display = 'block';
                 startPicker.setDate(info.start);
                 endPicker.setDate(info.start);
