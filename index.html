@@ -17,9 +17,19 @@
         .task-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-grow: 1; font-size: 0.9em; font-weight: 500; color: #fff; }
         .task-title.completed { text-decoration: line-through; opacity: 0.8; }
         
-        .btn-delete { color: #fff; font-weight: bold; font-size: 18px; padding: 0 5px; cursor: pointer; margin-left: auto; display: none; }
+        /* Chỉnh sửa dấu x lên trên 2px[cite: 10] */
+        .btn-delete { 
+            color: #fff; 
+            font-weight: bold; 
+            font-size: 18px; 
+            padding: 0 5px; 
+            cursor: pointer; 
+            margin-left: auto; 
+            display: none; 
+            transform: translateY(-2px); /* Dịch chuyển lên trên 2px */
+        }
         .fc-event:hover .btn-delete { display: block; }
-        .btn-delete:hover { transform: scale(1.2); }
+        .btn-delete:hover { transform: translateY(-2px) scale(1.2); }
 
         .fc-day-past { background-color: #f0f0f0 !important; opacity: 0.6; }
 
@@ -96,18 +106,17 @@
             selectable: true,
             editable: true,
             
-            // Xử lý màu sắc dựa theo trạng thái[cite: 7]
             eventDataTransform: function(eventData) {
                 const now = new Date();
                 const end = new Date(eventData.end);
                 const isDone = eventData.is_completed === true || eventData.is_completed === 1;
 
                 if (isDone) {
-                    eventData.backgroundColor = '#3498db'; // Màu Blue cho hoàn thành
+                    eventData.backgroundColor = '#3498db'; 
                 } else if (now > end) {
-                    eventData.backgroundColor = '#e74c3c'; // Màu Red cho quá hạn chưa hoàn thành
+                    eventData.backgroundColor = '#e74c3c'; 
                 } else {
-                    eventData.backgroundColor = '#2ecc71'; // Màu Green cho đang xử lý
+                    eventData.backgroundColor = '#2ecc71'; 
                 }
                 return eventData;
             },
