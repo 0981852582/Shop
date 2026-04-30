@@ -27,7 +27,19 @@
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
         .form-group input[type="text"], .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-family: inherit; }
-        .save-btn { width: 100%; padding: 12px; background: #2ecc71; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .save-btn { width: 100%; padding: 12px; background: #2ecc71; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; display: flex; justify-content: center; align-items: center; gap: 10px; }
+        .save-btn:disabled { background: #95a5a6; cursor: not-allowed; }
+
+        /* Hiệu ứng Loading Spinner */
+        .spinner {
+            width: 18px; height: 18px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top: 3px solid #fff;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            display: none; /* Mặc định ẩn */
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
@@ -58,7 +70,10 @@
                 <input type="checkbox" id="m_completed">
                 <label for="m_completed" style="margin-bottom:0">Đã hoàn thành</label>
             </div>
-            <button type="submit" class="save-btn">Lưu thông tin</button>
+            <button type="submit" id="submitBtn" class="save-btn">
+                <span class="spinner" id="loader"></span>
+                <span id="btnText">Lưu thông tin</span>
+            </button>
         </form>
     </div>
 </div>
@@ -69,7 +84,9 @@
     document.addEventListener('DOMContentLoaded', function () {
         const modal = document.getElementById('taskModal');
         const taskForm = document.getElementById('taskForm');
-        const mCompleted = document.getElementById('m_completed');
+        const submitBtn = document.getElementById('submitBtn');
+        const loader = document.getElementById('loader');
+        const btnText = document.getElementById('btnText');
         
         const pickerCfg = { enableTime: true, time_24hr: true, dateFormat: "Y-m-d H:i:S", locale: "vn" };
         const startPicker = flatpickr("#m_start", pickerCfg);
@@ -85,10 +102,9 @@
             eventContent: function(arg) {
                 const isDone = arg.event.extendedProps.is_completed;
                 const description = arg.event.extendedProps.description || "Không có mô tả";
-                
                 let container = document.createElement('div');
                 container.className = 'task-item';
-                container.setAttribute('title', description); // Hiện mô tả khi hover[cite: 1]
+                container.setAttribute('title', description);
                 
                 let cb = document.createElement('input');
                 cb.type = 'checkbox';
@@ -128,7 +144,7 @@
                 document.getElementById('m_id').value = info.event.id;
                 document.getElementById('m_title').value = info.event.title;
                 document.getElementById('m_description').value = info.event.extendedProps.description || "";
-                mCompleted.checked = info.event.extendedProps.is_completed;
+                document.getElementById('m_completed').checked = info.event.extendedProps.is_completed;
                 startPicker.setDate(info.event.start);
                 endPicker.setDate(info.event.end || info.event.start);
             },
@@ -147,20 +163,39 @@
 
         taskForm.onsubmit = async (e) => {
             e.preventDefault();
+            
+            // BẮT ĐẦU LOADING
+            submitBtn.disabled = true;
+            loader.style.display = "block";
+            btnText.innerText = "Đang lưu...";
+
             const id = document.getElementById('m_id').value;
-            const res = await fetch(id ? '/update-task' : '/add', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                    id,
-                    title: document.getElementById('m_title').value,
-                    description: document.getElementById('m_description').value,
-                    start_date: document.getElementById('m_start').value,
-                    due_date: document.getElementById('m_end').value,
-                    is_completed: mCompleted.checked
-                })
-            });
-            if (res.ok) { modal.style.display = 'none'; calendar.refetchEvents(); }
+            try {
+                const res = await fetch(id ? '/update-task' : '/add', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        id,
+                        title: document.getElementById('m_title').value,
+                        description: document.getElementById('m_description').value,
+                        start_date: document.getElementById('m_start').value,
+                        due_date: document.getElementById('m_end').value,
+                        is_completed: document.getElementById('m_completed').checked
+                    })
+                });
+
+                if (res.ok) {
+                    modal.style.display = 'none';
+                    calendar.refetchEvents();
+                }
+            } catch (err) {
+                alert("Lỗi kết nối server!");
+            } finally {
+                // KẾT THÚC LOADING[cite: 1]
+                submitBtn.disabled = false;
+                loader.style.display = "none";
+                btnText.innerText = "Lưu thông tin";
+            }
         };
     });
 </script>
