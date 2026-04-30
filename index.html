@@ -10,9 +10,29 @@
     <script src="https://npmcdn.com/flatpickr/dist/l10n/vn.js"></script>
     <style>
         body { font-family: 'Segoe UI', Arial, sans-serif; margin: 20px; background-color: #f4f7f6; }
-        #calendar { max-width: 1100px; margin: 0 auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); position: relative; }
+        #calendar-container { max-width: 1100px; margin: 0 auto; position: relative; }
+        #calendar { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
         
-        /* Hiệu ứng Loading toàn trang cho lịch */
+        /* Tooltip nhảy ngày nhanh */
+        .goto-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+            background: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .goto-controls input {
+            padding: 6px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 150px;
+            text-align: center;
+        }
+
         #loading-overlay {
             display: none;
             position: absolute;
@@ -60,15 +80,23 @@
 </head>
 <body>
 
-<div id="calendar">
-    <!-- Overlay Loading cho lịch -->
-    <div id="loading-overlay">
-        <div class="main-spinner"></div>
-        <p style="margin-top: 10px; color: #3498db; font-weight: bold;">Đang tải dữ liệu...</p>
+<div id="calendar-container">
+    <!-- Thanh chọn tháng ngày nhanh -->
+    <div class="goto-controls">
+        <label style="font-weight: bold;">📅 Nhảy đến ngày:</label>
+        <input type="text" id="goto-picker" placeholder="Chọn ngày...">
+    </div>
+
+    <div id="calendar">
+        <div id="loading-overlay">
+            <div class="main-spinner"></div>
+            <p style="margin-top: 10px; color: #3498db; font-weight: bold;">Đang tải dữ liệu...</p>
+        </div>
     </div>
 </div>
 
 <div id="taskModal" class="modal">
+    <!-- Nội dung Modal giữ nguyên[cite: 13] -->
     <div class="modal-content">
         <span class="close-btn">&times;</span>
         <h3 id="modalTitle">⏰ Thông tin công việc</h3>
@@ -121,47 +149,40 @@
             events: '/tasks',
             selectable: true,
             editable: true,
-            
-            // Tự động kích hoạt khi bắt đầu/kết thúc tải dữ liệu từ API[cite: 11]
+            headerToolbar: {
+                left: 'prev,next today',
+                center: 'title',
+                right: 'dayGridMonth,timeGridWeek,timeGridDay'
+            },
             loading: function(isLoading) {
                 loadingOverlay.style.display = isLoading ? 'flex' : 'none';
             },
-
+            // Logic màu sắc và nội dung giữ nguyên[cite: 13]
             eventDataTransform: function(eventData) {
                 const now = new Date();
                 const end = new Date(eventData.end);
                 const isDone = eventData.is_completed === true || eventData.is_completed === 1;
-
-                if (isDone) {
-                    eventData.backgroundColor = '#3498db'; 
-                } else if (now > end) {
-                    eventData.backgroundColor = '#e74c3c'; 
-                } else {
-                    eventData.backgroundColor = '#2ecc71'; 
-                }
+                if (isDone) eventData.backgroundColor = '#3498db'; 
+                else if (now > end) eventData.backgroundColor = '#e74c3c'; 
+                else eventData.backgroundColor = '#2ecc71'; 
                 return eventData;
             },
-
             eventContent: function(arg) {
                 const isDone = arg.event.extendedProps.is_completed;
                 const description = arg.event.extendedProps.description || "Không có mô tả";
                 let container = document.createElement('div');
                 container.className = 'task-item';
                 container.setAttribute('title', description);
-                
                 let cb = document.createElement('input');
                 cb.type = 'checkbox';
                 cb.className = 'task-checkbox';
                 cb.checked = isDone;
-
                 let inlineLoader = document.createElement('div');
                 inlineLoader.className = 'inline-spinner';
-
                 cb.onclick = async (e) => {
                     e.stopPropagation();
                     cb.style.display = 'none';
                     inlineLoader.style.display = 'block';
-
                     try {
                         const res = await fetch('/toggle-complete', {
                             method: 'POST',
@@ -177,11 +198,9 @@
                         alert("Cập nhật thất bại!");
                     }
                 };
-
                 let title = document.createElement('span');
                 title.className = `task-title ${isDone ? 'completed' : ''}`;
                 title.innerText = arg.event.title;
-
                 let delBtn = document.createElement('span');
                 delBtn.className = 'btn-delete';
                 delBtn.innerHTML = '&times;';
@@ -192,51 +211,54 @@
                         if (res.ok) arg.event.remove();
                     }
                 };
-
                 container.append(cb, inlineLoader, title, delBtn);
                 return { domNodes: [container] };
             },
-
             eventClick: function(info) {
                 modal.style.display = 'block';
                 document.getElementById('m_id').value = info.event.id;
                 document.getElementById('m_title').value = info.event.title;
                 document.getElementById('m_description').value = info.event.extendedProps.description || "";
                 document.getElementById('m_completed').checked = info.event.extendedProps.is_completed;
-                
                 startPicker.set("minDate", null); 
                 startPicker.setDate(info.event.start);
                 startPicker.set("minDate", "today");
-
                 endPicker.set("minDate", null);
                 endPicker.setDate(info.event.end || info.event.start);
                 endPicker.set("minDate", "today");
             },
-
             select: function(info) {
                 const selectedDate = new Date(info.start);
                 const today = new Date();
                 today.setHours(0,0,0,0);
-
                 if (selectedDate < today) {
                     calendar.unselect();
                     alert("Không thể tạo công việc cho những ngày trong quá khứ!");
                     return;
                 }
-
                 taskForm.reset();
                 document.getElementById('m_id').value = "";
                 modal.style.display = 'block';
-                
                 let dStart = new Date(info.start); dStart.setHours(0,0,0);
                 let dEnd = new Date(info.start); dEnd.setDate(dEnd.getDate() + 1); dEnd.setHours(23, 59, 59);
-
                 startPicker.setDate(dStart);
                 endPicker.setDate(dEnd);
             }
         });
 
         calendar.render();
+
+        // Khởi tạo bộ chọn ngày nhảy nhanh[cite: 13]
+        flatpickr("#goto-picker", {
+            locale: "vn",
+            dateFormat: "Y-m-d",
+            onChange: function(selectedDates, dateStr) {
+                if (dateStr) {
+                    calendar.gotoDate(dateStr); // Nhảy lịch đến ngày đã chọn[cite: 13]
+                }
+            }
+        });
+
         document.querySelector('.close-btn').onclick = () => modal.style.display = 'none';
 
         taskForm.onsubmit = async (e) => {
@@ -244,7 +266,6 @@
             submitBtn.disabled = true;
             loader.style.display = "block";
             btnText.innerText = "Đang lưu...";
-
             const id = document.getElementById('m_id').value;
             try {
                 const res = await fetch(id ? '/update-task' : '/add', {
@@ -259,13 +280,12 @@
                         is_completed: document.getElementById('m_completed').checked
                     })
                 });
-
                 if (res.ok) {
                     modal.style.display = 'none';
                     calendar.refetchEvents();
                 }
             } catch (err) {
-                alert("Lỗi kết nối server!");
+                alert("Lỗi server!");
             } finally {
                 submitBtn.disabled = false;
                 loader.style.display = "none";
