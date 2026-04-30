@@ -7,7 +7,6 @@ const app = express();
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// Cấu hình kết nối lấy từ biến môi trường (Environment Variables)
 const pool = new Pool({
     user: 'avnadmin',
     password: process.env.DB_PASSWORD || 'AVNS_QmkOm-kAB2jMARLl5TQ',
@@ -21,7 +20,6 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// 1. Lấy danh sách task[cite: 2]
 app.get('/tasks', async (req, res) => {
     try {
         const result = await pool.query(`
@@ -33,7 +31,6 @@ app.get('/tasks', async (req, res) => {
     } catch (err) { res.status(500).send(err.message); }
 });
 
-// 2. Thêm task mới[cite: 2]
 app.post('/add', async (req, res) => {
     try {
         const { title, start_date, due_date } = req.body;
@@ -45,7 +42,6 @@ app.post('/add', async (req, res) => {
     } catch (err) { res.status(500).send(err.message); }
 });
 
-// 3. Cập nhật task (Sửa lỗi Cannot POST /update-task)
 app.post('/update-task', async (req, res) => {
     try {
         const { id, title, start_date, due_date, is_completed } = req.body;
@@ -57,7 +53,6 @@ app.post('/update-task', async (req, res) => {
     } catch (err) { res.status(500).send(err.message); }
 });
 
-// 4. Xóa task (Dùng cho dấu x góc phải)
 app.delete('/delete-task/:id', async (req, res) => {
     try {
         const { id } = req.params;
@@ -66,7 +61,6 @@ app.delete('/delete-task/:id', async (req, res) => {
     } catch (err) { res.status(500).send(err.message); }
 });
 
-// 5. Toggle hoàn thành nhanh[cite: 2]
 app.post('/toggle-complete', async (req, res) => {
     try {
         const { id, is_completed } = req.body;
