@@ -12,20 +12,10 @@
         body { font-family: 'Segoe UI', Arial, sans-serif; margin: 20px; background-color: #f4f7f6; }
         #calendar-container { max-width: 1100px; margin: 0 auto; position: relative; }
         #calendar { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); min-height: 500px; }
-        
         .goto-controls { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; background: white; padding: 10px 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
         .goto-controls input { padding: 6px 12px; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; width: 150px; text-align: center; }
-        
-        /* Block-UI Overlay: Hiển thị mặc định để khóa giao diện[cite: 21] */
-        #loading-overlay { 
-            display: flex; 
-            position: absolute; top: 0; left: 0; right: 0; bottom: 0; 
-            background: rgba(255, 255, 255, 0.85); z-index: 100; 
-            justify-content: center; align-items: center; flex-direction: column; border-radius: 12px; 
-            pointer-events: all; /* Chặn mọi tương tác chuột bên dưới[cite: 21] */
-        }
+        #loading-overlay { display: flex; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255, 255, 255, 0.85); z-index: 100; justify-content: center; align-items: center; flex-direction: column; border-radius: 12px; pointer-events: all; }
         .main-spinner { width: 50px; height: 50px; border: 5px solid #f3f3f3; border-top: 5px solid #3498db; border-radius: 50%; animation: spin 1s linear infinite; }
-        
         .fc-event { cursor: pointer; padding: 4px; border: none !important; border-radius: 4px !important; position: relative; }
         .task-item { display: flex; align-items: center; gap: 5px; width: 100%; overflow: hidden; }
         .task-checkbox { cursor: pointer; width: 14px; height: 14px; flex-shrink: 0; }
@@ -104,6 +94,7 @@
         const loader = document.getElementById('loader');
         const btnText = document.getElementById('btnText');
         const loadingOverlay = document.getElementById('loading-overlay');
+        const mCompleted = document.getElementById('m_completed');
         
         const pickerCfg = { enableTime: true, time_24hr: true, dateFormat: "Y-m-d H:i:S", locale: "vn", minDate: "today" };
         const startPicker = flatpickr("#m_start", pickerCfg);
@@ -116,11 +107,7 @@
             selectable: true,
             editable: true,
             headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,timeGridDay' },
-            
-            // Xử lý Block-UI khi dữ liệu đang tải từ API[cite: 21]
-            loading: function(isLoading) { 
-                loadingOverlay.style.display = isLoading ? 'flex' : 'none'; 
-            },
+            loading: function(isLoading) { loadingOverlay.style.display = isLoading ? 'flex' : 'none'; },
             
             eventDataTransform: function(eventData) {
                 const now = new Date();
@@ -204,11 +191,20 @@
             },
 
             eventClick: function(info) {
+                const now = new Date();
+                const start = new Date(info.event.start);
+                const isDone = info.event.extendedProps.is_completed;
+                const isNotStarted = now < start && !isDone; // Logic kiểm tra task chưa bắt đầu[cite: 24]
+
                 modal.style.display = 'block';
                 document.getElementById('m_id').value = info.event.id;
                 document.getElementById('m_title').value = info.event.title;
                 document.getElementById('m_description').value = info.event.extendedProps.description || "";
-                document.getElementById('m_completed').checked = info.event.extendedProps.is_completed;
+                
+                mCompleted.checked = isDone;
+                // Khóa checkbox trạng thái trong modal nếu công việc chưa bắt đầu[cite: 24]
+                mCompleted.disabled = isNotStarted; 
+                
                 startPicker.setDate(info.event.start);
                 endPicker.setDate(info.event.end || info.event.start);
             },
@@ -224,16 +220,15 @@
                 }
                 taskForm.reset();
                 document.getElementById('m_id').value = "";
+                mCompleted.disabled = false; // Luôn mở cho task mới[cite: 24]
                 modal.style.display = 'block';
                 startPicker.setDate(info.start);
                 endPicker.setDate(info.start);
             }
         });
 
-        // Khởi tạo xong thì render[cite: 21]
         calendar.render();
-        
-        // Block-UI sẽ tự động ẩn thông qua sự kiện 'loading' của FullCalendar bên trên[cite: 21]
+        loadingOverlay.style.display = 'none';
 
         flatpickr("#goto-picker", {
             locale: "vn",
@@ -261,7 +256,7 @@
                         description: document.getElementById('m_description').value,
                         start_date: document.getElementById('m_start').value,
                         due_date: document.getElementById('m_end').value,
-                        is_completed: document.getElementById('m_completed').checked
+                        is_completed: mCompleted.checked
                     })
                 });
                 if (res.ok) {
