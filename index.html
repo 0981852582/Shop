@@ -84,8 +84,11 @@
             
             eventContent: function(arg) {
                 const isDone = arg.event.extendedProps.is_completed;
+                const description = arg.event.extendedProps.description || "Không có mô tả";
+                
                 let container = document.createElement('div');
                 container.className = 'task-item';
+                container.setAttribute('title', description); // Hiện mô tả khi hover[cite: 1]
                 
                 let cb = document.createElement('input');
                 cb.type = 'checkbox';

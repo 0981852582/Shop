@@ -20,7 +20,7 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// 1. Lấy danh sách task (Bao gồm description)[cite: 2]
+// 1. Lấy danh sách task (Bao gồm description)
 app.get('/tasks', async (req, res) => {
     try {
         const result = await pool.query(`
@@ -32,7 +32,7 @@ app.get('/tasks', async (req, res) => {
     } catch (err) { res.status(500).send(err.message); }
 });
 
-// 2. Thêm task mới (Bao gồm description)[cite: 2]
+// 2. Thêm task mới[cite: 2]
 app.post('/add', async (req, res) => {
     try {
         const { title, description, start_date, due_date } = req.body;
@@ -44,7 +44,7 @@ app.post('/add', async (req, res) => {
     } catch (err) { res.status(500).send(err.message); }
 });
 
-// 3. Cập nhật task (Bao gồm description)
+// 3. Cập nhật task[cite: 2]
 app.post('/update-task', async (req, res) => {
     try {
         const { id, title, description, start_date, due_date, is_completed } = req.body;
