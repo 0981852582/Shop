@@ -20,10 +20,11 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
+// 1. Lấy danh sách task (Bao gồm description)[cite: 2]
 app.get('/tasks', async (req, res) => {
     try {
         const result = await pool.query(`
-            SELECT id, title, is_completed,
+            SELECT id, title, description, is_completed,
             TO_CHAR(start_date, 'YYYY-MM-DD HH24:MI:SS') as start, 
             TO_CHAR(due_date, 'YYYY-MM-DD HH24:MI:SS') as "end"
             FROM tasks`);
@@ -31,28 +32,31 @@ app.get('/tasks', async (req, res) => {
     } catch (err) { res.status(500).send(err.message); }
 });
 
+// 2. Thêm task mới (Bao gồm description)[cite: 2]
 app.post('/add', async (req, res) => {
     try {
-        const { title, start_date, due_date } = req.body;
+        const { title, description, start_date, due_date } = req.body;
         await pool.query(
-            'INSERT INTO tasks (title, start_date, due_date, is_completed) VALUES ($1, $2, $3, $4)',
-            [title, start_date, due_date, false]
+            'INSERT INTO tasks (title, description, start_date, due_date, is_completed) VALUES ($1, $2, $3, $4, $5)',
+            [title, description, start_date, due_date, false]
         );
         res.sendStatus(200);
     } catch (err) { res.status(500).send(err.message); }
 });
 
+// 3. Cập nhật task (Bao gồm description)
 app.post('/update-task', async (req, res) => {
     try {
-        const { id, title, start_date, due_date, is_completed } = req.body;
+        const { id, title, description, start_date, due_date, is_completed } = req.body;
         await pool.query(
-            'UPDATE tasks SET title = $1, start_date = $2, due_date = $3, is_completed = $4 WHERE id = $5',
-            [title, start_date, due_date, is_completed, id]
+            'UPDATE tasks SET title = $1, description = $2, start_date = $3, due_date = $4, is_completed = $5 WHERE id = $6',
+            [title, description, start_date, due_date, is_completed, id]
         );
         res.sendStatus(200);
     } catch (err) { res.status(500).send(err.message); }
 });
 
+// 4. Xóa task
 app.delete('/delete-task/:id', async (req, res) => {
     try {
         const { id } = req.params;
@@ -61,6 +65,7 @@ app.delete('/delete-task/:id', async (req, res) => {
     } catch (err) { res.status(500).send(err.message); }
 });
 
+// 5. Toggle hoàn thành nhanh[cite: 2]
 app.post('/toggle-complete', async (req, res) => {
     try {
         const { id, is_completed } = req.body;
