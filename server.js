@@ -10,7 +10,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 // Cấu hình kết nối lấy từ Aiven PostgreSQL của bạn
 const pool = new Pool({
     user: 'avnadmin',
-	password: process.env.DB_PASSWORD || 'AVNS_QmkOm-kAB2jMARLl5TQ'
+	password: process.env.DB_PASSWORD || 'AVNS_QmkOm-kAB2jMARLl5TQ',
     host: 'trongtq-truongquoctrong231194-cc9f.h.aivencloud.com',
     port: 19350,
     database: 'defaultdb',
