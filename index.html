@@ -27,7 +27,7 @@
             transition: background-color 0.2s;
         }
 
-        /* Hiệu ứng task khi được focus[cite: 29] */
+        /* Hiệu ứng task khi được focus */
         .fc-event-focus {
             background-color: #FFC0CB !important;
             border: 1px solid #ff8da1 !important;
@@ -210,7 +210,7 @@
             },
 
             eventClick: function(info) {
-                // Xử lý Focus màu hồng[cite: 29]
+                // Xử lý Focus màu hồng
                 document.querySelectorAll('.fc-event').forEach(el => el.classList.remove('fc-event-focus'));
                 info.el.classList.add('fc-event-focus');
 
@@ -233,7 +233,7 @@
             },
 
             select: function(info) {
-                // Khi click vùng trống thì bỏ focus task cũ[cite: 29]
+                // Khi click vùng trống thì bỏ focus task cũ
                 document.querySelectorAll('.fc-event').forEach(el => el.classList.remove('fc-event-focus'));
 
                 const selectedDate = new Date(info.start);
@@ -250,8 +250,19 @@
                 document.getElementById('m_id').value = "";
                 mCompleted.disabled = false;
                 modal.style.display = 'block';
-                startPicker.setDate(info.start);
-                endPicker.setDate(info.start);
+                
+                // 1. Gán ngày Bắt đầu là ngày được click
+                startPicker.setDate(selectedDate);
+
+                // 2. Tạo ngày Kết thúc: Lấy ngày được click + thêm 1 ngày
+                const endDate = new Date(selectedDate);
+                endDate.setDate(endDate.getDate() + 1);
+                
+                // 3. Ép thời gian của ngày Kết thúc thành 23:59:59
+                endDate.setHours(23, 59, 59, 0);
+
+                // 4. Gán giá trị vào picker Kết thúc
+                endPicker.setDate(endDate);
             }
         });
 
