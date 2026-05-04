@@ -50,7 +50,7 @@
         .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
         .form-group input[type="text"], .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-family: inherit; }
         
-        /* Màu nền cho ô input khi bị khóa[cite: 11] */
+        /* Màu nền cho ô input khi bị khóa[cite: 12] */
         .form-group input[readonly].is-locked { background-color: #f0f0f0; cursor: not-allowed; color: #777; }
 
         .save-btn { width: 100%; padding: 12px; background: #2ecc71; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; display: flex; justify-content: center; align-items: center; gap: 10px; }
@@ -234,7 +234,7 @@
                 mCompleted.checked = isDone;
                 mCompleted.disabled = isNotStarted; 
 
-                // KHÓA SỬA NGÀY NẾU TASK HOÀN THÀNH[cite: 11]
+                // KHÓA SỬA NGÀY NẾU TASK HOÀN THÀNH[cite: 12]
                 if (isDone) {
                     startPicker.set('clickOpens', false);
                     endPicker.set('clickOpens', false);
@@ -269,16 +269,16 @@
                 mCompleted.disabled = false;
                 modal.style.display = 'block';
 
-                // Mở khóa picker cho task mới
+                // Mở khóa picker cho task mới[cite: 12]
                 startPicker.set('clickOpens', true);
                 endPicker.set('clickOpens', true);
                 mStartInput.classList.remove('is-locked');
                 mEndInput.classList.remove('is-locked');
                 
-                // Ngày bắt đầu: ngày được click[cite: 11]
+                // Ngày bắt đầu: ngày được click[cite: 12]
                 startPicker.setDate(selectedDate);
 
-                // Ngày kết thúc: ngày tiếp theo vào 23:59:59[cite: 11]
+                // Ngày kết thúc: ngày tiếp theo vào 23:59:59[cite: 12]
                 const endDate = new Date(selectedDate);
                 endDate.setDate(endDate.getDate() + 1);
                 endDate.setHours(23, 59, 59, 0);
