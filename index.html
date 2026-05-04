@@ -50,8 +50,8 @@
         .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
         .form-group input[type="text"], .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-family: inherit; }
         
-        /* Hiển thị trực quan cho ô bị khóa[cite: 8] */
-        .form-group input[readonly] { background-color: #f9f9f9; cursor: not-allowed; color: #666; }
+        /* Màu nền cho ô input khi bị khóa[cite: 11] */
+        .form-group input[readonly].is-locked { background-color: #f0f0f0; cursor: not-allowed; color: #777; }
 
         .save-btn { width: 100%; padding: 12px; background: #2ecc71; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; display: flex; justify-content: center; align-items: center; gap: 10px; }
         .spinner { width: 18px; height: 18px; border: 3px solid rgba(255,255,255,0.3); border-top: 3px solid #fff; border-radius: 50%; animation: spin 0.8s linear infinite; display: none; }
@@ -118,8 +118,10 @@
         const loadingOverlay = document.getElementById('loading-overlay');
         const mCompleted = document.getElementById('m_completed');
         const statusGroup = document.getElementById('status-group');
+        const mStartInput = document.getElementById('m_start');
+        const mEndInput = document.getElementById('m_end');
         
-        // Cấu hình Flatpickr[cite: 8]
+        // Cấu hình Flatpickr
         const pickerCfg = { enableTime: true, time_24hr: true, dateFormat: "Y-m-d H:i:S", locale: "vn", minDate: "today" };
         const startPicker = flatpickr("#m_start", pickerCfg);
         const endPicker = flatpickr("#m_end", pickerCfg);
@@ -232,13 +234,17 @@
                 mCompleted.checked = isDone;
                 mCompleted.disabled = isNotStarted; 
 
-                // KHÓA Ô CHỌN NGÀY NẾU ĐÃ HOÀN THÀNH[cite: 8]
+                // KHÓA SỬA NGÀY NẾU TASK HOÀN THÀNH[cite: 11]
                 if (isDone) {
                     startPicker.set('clickOpens', false);
                     endPicker.set('clickOpens', false);
+                    mStartInput.classList.add('is-locked');
+                    mEndInput.classList.add('is-locked');
                 } else {
                     startPicker.set('clickOpens', true);
                     endPicker.set('clickOpens', true);
+                    mStartInput.classList.remove('is-locked');
+                    mEndInput.classList.remove('is-locked');
                 }
                 
                 startPicker.setDate(start);
@@ -263,14 +269,16 @@
                 mCompleted.disabled = false;
                 modal.style.display = 'block';
 
-                // Luôn mở khóa picker cho task mới[cite: 8]
+                // Mở khóa picker cho task mới
                 startPicker.set('clickOpens', true);
                 endPicker.set('clickOpens', true);
+                mStartInput.classList.remove('is-locked');
+                mEndInput.classList.remove('is-locked');
                 
-                // Ngày bắt đầu: ngày được click[cite: 8, 10]
+                // Ngày bắt đầu: ngày được click[cite: 11]
                 startPicker.setDate(selectedDate);
 
-                // Ngày kết thúc: ngày tiếp theo vào 23:59:59[cite: 8, 10]
+                // Ngày kết thúc: ngày tiếp theo vào 23:59:59[cite: 11]
                 const endDate = new Date(selectedDate);
                 endDate.setDate(endDate.getDate() + 1);
                 endDate.setHours(23, 59, 59, 0);
@@ -305,8 +313,8 @@
                         id,
                         title: document.getElementById('m_title').value,
                         description: document.getElementById('m_description').value,
-                        start_date: document.getElementById('m_start').value,
-                        due_date: document.getElementById('m_end').value,
+                        start_date: mStartInput.value,
+                        due_date: mEndInput.value,
                         is_completed: mCompleted.checked
                     })
                 });
