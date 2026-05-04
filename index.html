@@ -36,7 +36,7 @@
         .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
         .form-group input[type="text"], .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-family: inherit; }
         
-        /* Hiển thị văn bản khi bị khóa thay vì ô input. Độ cao đã giảm xuống 38px để bằng ô Tên công việc */
+        /* Hiển thị văn bản khi bị khóa thay vì ô input */
         .date-display { 
             width: 100%; padding: 0 10px; border: 1px solid #ddd; border-radius: 6px; 
             background-color: #f9f9f9; color: #555; min-height: 38px; display: none; align-items: center;
@@ -145,9 +145,14 @@
                 const isDone = arg.event.extendedProps.is_completed;
                 let container = document.createElement('div');
                 container.className = 'task-item';
+                
+                // --- THÊM TOOLTIP TẠI ĐÂY ---
+                container.setAttribute('title', arg.event.extendedProps.description || "Không có mô tả");
+
                 let title = document.createElement('span');
                 title.className = `task-title ${isDone ? 'completed' : ''}`;
                 title.innerText = arg.event.title;
+                
                 let delBtn = document.createElement('span');
                 delBtn.className = 'btn-delete';
                 delBtn.innerHTML = '&times;';
@@ -158,6 +163,7 @@
                         if (res.ok) arg.event.remove();
                     }
                 };
+                
                 container.append(title, delBtn);
                 return { domNodes: [container] };
             },
@@ -168,14 +174,12 @@
 
                 const isDone = info.event.extendedProps.is_completed;
                 
-                // Định dạng ngày tháng: Dùng dấu gạch ngang và khoảng cách, bỏ dấu phẩy[cite: 16]
                 const formatOpts = { 
                     year: 'numeric', month: '2-digit', day: '2-digit', 
                     hour: '2-digit', minute: '2-digit', second: '2-digit', 
                     hour12: false 
                 };
                 
-                // Sử dụng Intl.DateTimeFormat để kiểm soát định dạng chính xác (YYYY-MM-DD HH:mm:ss)
                 const formatDateStr = (date) => {
                     const parts = new Intl.DateTimeFormat('en-GB', formatOpts).formatToParts(date);
                     const p = {};
