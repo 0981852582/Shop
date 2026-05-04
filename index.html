@@ -36,10 +36,11 @@
         .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
         .form-group input[type="text"], .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-family: inherit; }
         
-        /* Hiển thị văn bản khi bị khóa thay vì ô input */
+        /* Hiển thị văn bản khi bị khóa thay vì ô input. Độ cao đã giảm xuống 38px để bằng ô Tên công việc[cite: 14] */
         .date-display { 
-            width: 100%; padding: 10px; border: 1px solid #eee; border-radius: 6px; 
-            background-color: #f9f9f9; color: #555; min-height: 40px; display: none; align-items: center;
+            width: 100%; padding: 0 10px; border: 1px solid #ddd; border-radius: 6px; 
+            background-color: #f9f9f9; color: #555; min-height: 38px; display: none; align-items: center;
+            box-sizing: border-box;
         }
 
         .save-btn { width: 100%; padding: 12px; background: #2ecc71; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; display: flex; justify-content: center; align-items: center; gap: 10px; }
@@ -166,8 +167,15 @@
                 info.el.classList.add('fc-event-focus');
 
                 const isDone = info.event.extendedProps.is_completed;
-                const startStr = FullCalendar.formatDate(info.event.start, { hour: '2-digit', minute: '2-digit', second: '2-digit', year: 'numeric', month: '2-digit', day: '2-digit', hour12: false }).replace(/\//g, '-');
-                const endStr = FullCalendar.formatDate(info.event.end || info.event.start, { hour: '2-digit', minute: '2-digit', second: '2-digit', year: 'numeric', month: '2-digit', day: '2-digit', hour12: false }).replace(/\//g, '-');
+                
+                // Định dạng ngày tháng: Dùng dấu gạch ngang và khoảng cách[cite: 14]
+                const formatOpts = { 
+                    year: 'numeric', month: '2-digit', day: '2-digit', 
+                    hour: '2-digit', minute: '2-digit', second: '2-digit', 
+                    hour12: false 
+                };
+                const startStr = FullCalendar.formatDate(info.event.start, formatOpts).replace(/\//g, '-');
+                const endStr = FullCalendar.formatDate(info.event.end || info.event.start, formatOpts).replace(/\//g, '-');
 
                 statusGroup.style.display = 'flex';
                 modal.style.display = 'block';
@@ -243,7 +251,6 @@
             btnText.innerText = "Đang lưu...";
             const id = document.getElementById('m_id').value;
             
-            // Lấy giá trị từ text nếu input bị ẩn
             const startVal = mStartInput.style.display === 'none' ? mStartTxt.innerText : mStartInput.value;
             const endVal = mEndInput.style.display === 'none' ? mEndTxt.innerText : mEndInput.value;
 
