@@ -36,7 +36,7 @@
         .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
         .form-group input[type="text"], .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-family: inherit; }
         
-        /* Hiển thị văn bản khi bị khóa thay vì ô input. Độ cao đã giảm xuống 38px để bằng ô Tên công việc[cite: 14] */
+        /* Hiển thị văn bản khi bị khóa thay vì ô input. Độ cao đã giảm xuống 38px để bằng ô Tên công việc */
         .date-display { 
             width: 100%; padding: 0 10px; border: 1px solid #ddd; border-radius: 6px; 
             background-color: #f9f9f9; color: #555; min-height: 38px; display: none; align-items: center;
@@ -168,14 +168,23 @@
 
                 const isDone = info.event.extendedProps.is_completed;
                 
-                // Định dạng ngày tháng: Dùng dấu gạch ngang và khoảng cách[cite: 14]
+                // Định dạng ngày tháng: Dùng dấu gạch ngang và khoảng cách, bỏ dấu phẩy[cite: 16]
                 const formatOpts = { 
                     year: 'numeric', month: '2-digit', day: '2-digit', 
                     hour: '2-digit', minute: '2-digit', second: '2-digit', 
                     hour12: false 
                 };
-                const startStr = FullCalendar.formatDate(info.event.start, formatOpts).replace(/\//g, '-');
-                const endStr = FullCalendar.formatDate(info.event.end || info.event.start, formatOpts).replace(/\//g, '-');
+                
+                // Sử dụng Intl.DateTimeFormat để kiểm soát định dạng chính xác (YYYY-MM-DD HH:mm:ss)
+                const formatDateStr = (date) => {
+                    const parts = new Intl.DateTimeFormat('en-GB', formatOpts).formatToParts(date);
+                    const p = {};
+                    parts.forEach(part => p[part.type] = part.value);
+                    return `${p.year}-${p.month}-${p.day} ${p.hour}:${p.minute}:${p.second}`;
+                };
+
+                const startStr = formatDateStr(info.event.start);
+                const endStr = formatDateStr(info.event.end || info.event.start);
 
                 statusGroup.style.display = 'flex';
                 modal.style.display = 'block';
