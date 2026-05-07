@@ -26,7 +26,6 @@
         .task-item { display: flex; align-items: flex-start; gap: 5px; width: 100%; overflow: hidden; } 
         .task-checkbox { cursor: pointer; width: 14px; height: 14px; flex-shrink: 0; margin-top: 2px; }
         
-        /* Thay đổi color thành inherit để nhận màu sắc tự động từ thư viện dựa vào trạng thái */
         .task-title { flex-grow: 1; font-size: 0.9em; font-weight: 500; color: inherit; white-space: pre-wrap; word-break: break-word; }
         
         .task-title.completed { text-decoration: line-through; opacity: 0.8; }
@@ -40,7 +39,6 @@
         .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
         .form-group input[type="text"], .form-group textarea { width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-family: inherit; }
         
-        /* Màu nền cho ô input/textarea khi bị khóa */
         .form-group input[readonly], .form-group textarea[readonly] { background-color: #f0f0f0; cursor: not-allowed; color: #777; }
 
         #m_title { min-height: 60px; resize: vertical; }
@@ -141,28 +139,28 @@
                 const end = new Date(eventData.end);
                 const isDone = eventData.is_completed === true || eventData.is_completed === 1;
 
-                // THÊM: Logic cho task đã hoàn thành VÀ quá hạn
+                // Gán trực tiếp vào eventData (không gán qua extendedProps vì nó chưa tồn tại ở bước này)
                 if (isDone && now > end) {
-                    eventData.backgroundColor = '#fff3cd'; // Vàng nhạt
-                    eventData.textColor = '#856404'; // Chữ nâu đậm
+                    eventData.backgroundColor = '#fff3cd'; 
+                    eventData.textColor = '#856404'; 
                     eventData.borderColor = '#ffeeba';
-                    eventData.extendedProps.is_locked = true; // Cờ hiệu khóa
+                    eventData.is_locked = true; 
                 } else if (isDone) {
                     eventData.backgroundColor = '#3498db'; 
                     eventData.textColor = '#fff';
-                    eventData.extendedProps.is_locked = false;
+                    eventData.is_locked = false;
                 } else if (now < start) {
                     eventData.backgroundColor = '#9C9C9C'; 
                     eventData.textColor = '#fff';
-                    eventData.extendedProps.is_locked = false;
+                    eventData.is_locked = false;
                 } else if (now > end) {
                     eventData.backgroundColor = '#e74c3c'; 
                     eventData.textColor = '#fff';
-                    eventData.extendedProps.is_locked = false;
+                    eventData.is_locked = false;
                 } else {
                     eventData.backgroundColor = '#2ecc71'; 
                     eventData.textColor = '#fff';
-                    eventData.extendedProps.is_locked = false;
+                    eventData.is_locked = false;
                 }
                 
                 return eventData;
@@ -170,7 +168,7 @@
 
             eventContent: function(arg) {
                 const isDone = arg.event.extendedProps.is_completed;
-                const isLocked = arg.event.extendedProps.is_locked;
+                const isLocked = arg.event.extendedProps.is_locked; // Lúc này FullCalendar đã tự động bọc is_locked vào extendedProps
                 const now = new Date();
                 const start = new Date(arg.event.start);
                 const isNotStarted = now < start && !isDone; 
@@ -183,7 +181,6 @@
                 cb.type = 'checkbox';
                 cb.className = 'task-checkbox';
                 cb.checked = isDone;
-                // Khóa checkbox nếu task chưa tới hạn hoặc đã bị khóa hoàn toàn
                 if (isNotStarted || isLocked) cb.disabled = true;
 
                 let inlineLoader = document.createElement('div');
@@ -213,7 +210,6 @@
                 title.className = `task-title ${isDone ? 'completed' : ''}`;
                 title.innerText = arg.event.title; 
                 
-                // Nút xóa chỉ hiển thị khi task KHÔNG bị khóa
                 if (!isLocked) {
                     let delBtn = document.createElement('span');
                     delBtn.className = 'btn-delete';
@@ -267,12 +263,11 @@
                 document.getElementById('m_description').value = info.event.extendedProps.description || "";
                 mCompleted.checked = isDone;
 
-                // Đóng/Mở các trường dữ liệu tùy theo trạng thái Khóa
                 if (isLocked) {
                     document.getElementById('m_title').readOnly = true;
                     document.getElementById('m_description').readOnly = true;
                     mCompleted.disabled = true;
-                    submitBtn.style.display = 'none'; // Ẩn nút lưu
+                    submitBtn.style.display = 'none';
 
                     mStartInput.style.display = 'none';
                     mEndInput.style.display = 'none';
@@ -284,7 +279,7 @@
                     document.getElementById('m_title').readOnly = false;
                     document.getElementById('m_description').readOnly = false;
                     mCompleted.disabled = false;
-                    submitBtn.style.display = 'flex'; // Hiện lại nút lưu
+                    submitBtn.style.display = 'flex'; 
 
                     if (isDone) {
                         mStartInput.style.display = 'none';
@@ -329,7 +324,6 @@
                 document.getElementById('m_id').value = "";
                 modal.style.display = 'block';
 
-                // Reset lại toàn bộ form về chế độ Edit cho task mới
                 document.getElementById('m_title').readOnly = false;
                 document.getElementById('m_description').readOnly = false;
                 submitBtn.style.display = 'flex';
