@@ -26,7 +26,8 @@
         .task-item { display: flex; align-items: flex-start; gap: 5px; width: 100%; overflow: hidden; } 
         .task-checkbox { cursor: pointer; width: 14px; height: 14px; flex-shrink: 0; margin-top: 2px; }
         
-        .task-title { flex-grow: 1; font-size: 0.9em; font-weight: 500; color: #fff; white-space: pre-wrap; word-break: break-word; }
+        /* Thay đổi color thành inherit để nhận màu sắc tự động từ thư viện dựa vào trạng thái */
+        .task-title { flex-grow: 1; font-size: 0.9em; font-weight: 500; color: inherit; white-space: pre-wrap; word-break: break-word; }
         
         .task-title.completed { text-decoration: line-through; opacity: 0.8; }
         .btn-delete { color: inherit; font-weight: bold; font-size: 18px; padding: 0 5px; cursor: pointer; margin-left: auto; display: none; transform: translateY(-2px); }
@@ -39,6 +40,9 @@
         .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
         .form-group input[type="text"], .form-group textarea { width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-family: inherit; }
         
+        /* Màu nền cho ô input/textarea khi bị khóa */
+        .form-group input[readonly], .form-group textarea[readonly] { background-color: #f0f0f0; cursor: not-allowed; color: #777; }
+
         #m_title { min-height: 60px; resize: vertical; }
 
         .date-display { 
@@ -119,7 +123,6 @@
         const mStartTxt = document.getElementById('m_start_txt');
         const mEndTxt = document.getElementById('m_end_txt');
         
-        // Gỡ bỏ minDate để tránh lỗi trống dữ liệu với các task cũ[cite: 22]
         const pickerCfg = { enableTime: true, time_24hr: true, dateFormat: "Y-m-d H:i:S", locale: "vn" };
         const startPicker = flatpickr("#m_start", pickerCfg);
         const endPicker = flatpickr("#m_end", pickerCfg);
@@ -138,17 +141,36 @@
                 const end = new Date(eventData.end);
                 const isDone = eventData.is_completed === true || eventData.is_completed === 1;
 
-                if (isDone) eventData.backgroundColor = '#3498db'; 
-                else if (now < start) eventData.backgroundColor = '#9C9C9C'; 
-                else if (now > end) eventData.backgroundColor = '#e74c3c'; 
-                else eventData.backgroundColor = '#2ecc71'; 
+                // THÊM: Logic cho task đã hoàn thành VÀ quá hạn
+                if (isDone && now > end) {
+                    eventData.backgroundColor = '#fff3cd'; // Vàng nhạt
+                    eventData.textColor = '#856404'; // Chữ nâu đậm
+                    eventData.borderColor = '#ffeeba';
+                    eventData.extendedProps.is_locked = true; // Cờ hiệu khóa
+                } else if (isDone) {
+                    eventData.backgroundColor = '#3498db'; 
+                    eventData.textColor = '#fff';
+                    eventData.extendedProps.is_locked = false;
+                } else if (now < start) {
+                    eventData.backgroundColor = '#9C9C9C'; 
+                    eventData.textColor = '#fff';
+                    eventData.extendedProps.is_locked = false;
+                } else if (now > end) {
+                    eventData.backgroundColor = '#e74c3c'; 
+                    eventData.textColor = '#fff';
+                    eventData.extendedProps.is_locked = false;
+                } else {
+                    eventData.backgroundColor = '#2ecc71'; 
+                    eventData.textColor = '#fff';
+                    eventData.extendedProps.is_locked = false;
+                }
                 
-                eventData.textColor = '#fff';
                 return eventData;
             },
 
             eventContent: function(arg) {
                 const isDone = arg.event.extendedProps.is_completed;
+                const isLocked = arg.event.extendedProps.is_locked;
                 const now = new Date();
                 const start = new Date(arg.event.start);
                 const isNotStarted = now < start && !isDone; 
@@ -161,7 +183,8 @@
                 cb.type = 'checkbox';
                 cb.className = 'task-checkbox';
                 cb.checked = isDone;
-                if (isNotStarted) cb.disabled = true;
+                // Khóa checkbox nếu task chưa tới hạn hoặc đã bị khóa hoàn toàn
+                if (isNotStarted || isLocked) cb.disabled = true;
 
                 let inlineLoader = document.createElement('div');
                 inlineLoader.className = 'inline-spinner';
@@ -190,18 +213,23 @@
                 title.className = `task-title ${isDone ? 'completed' : ''}`;
                 title.innerText = arg.event.title; 
                 
-                let delBtn = document.createElement('span');
-                delBtn.className = 'btn-delete';
-                delBtn.innerHTML = '&times;';
-                delBtn.onclick = async (e) => {
-                    e.stopPropagation();
-                    if (confirm("Xóa công việc này?")) {
-                        const res = await fetch(`/delete-task/${arg.event.id}`, { method: 'DELETE' });
-                        if (res.ok) arg.event.remove();
-                    }
-                };
-                
-                container.append(cb, inlineLoader, title, delBtn);
+                // Nút xóa chỉ hiển thị khi task KHÔNG bị khóa
+                if (!isLocked) {
+                    let delBtn = document.createElement('span');
+                    delBtn.className = 'btn-delete';
+                    delBtn.innerHTML = '&times;';
+                    delBtn.onclick = async (e) => {
+                        e.stopPropagation();
+                        if (confirm("Xóa công việc này?")) {
+                            const res = await fetch(`/delete-task/${arg.event.id}`, { method: 'DELETE' });
+                            if (res.ok) arg.event.remove();
+                        }
+                    };
+                    container.append(cb, inlineLoader, title, delBtn);
+                } else {
+                    container.append(cb, inlineLoader, title);
+                }
+
                 return { domNodes: [container] };
             },
 
@@ -212,7 +240,8 @@
                 const now = new Date();
                 const start = new Date(info.event.start);
                 const isDone = info.event.extendedProps.is_completed;
-                const isProcessing = !isDone && now >= start; // Đã đến hoặc qua thời gian bắt đầu
+                const isLocked = info.event.extendedProps.is_locked;
+                const isProcessing = !isDone && now >= start; 
                 
                 const formatOpts = { 
                     year: 'numeric', month: '2-digit', day: '2-digit', 
@@ -238,31 +267,48 @@
                 document.getElementById('m_description').value = info.event.extendedProps.description || "";
                 mCompleted.checked = isDone;
 
-                if (isDone) {
-                    // Task Đã xong -> Khóa cả Bắt đầu và Kết thúc (hiển thị Text)
+                // Đóng/Mở các trường dữ liệu tùy theo trạng thái Khóa
+                if (isLocked) {
+                    document.getElementById('m_title').readOnly = true;
+                    document.getElementById('m_description').readOnly = true;
+                    mCompleted.disabled = true;
+                    submitBtn.style.display = 'none'; // Ẩn nút lưu
+
                     mStartInput.style.display = 'none';
                     mEndInput.style.display = 'none';
                     mStartTxt.style.display = 'flex';
                     mEndTxt.style.display = 'flex';
                     mStartTxt.innerText = startStr;
                     mEndTxt.innerText = endStr;
-                } else if (isProcessing) {
-                    // Task Đang xử lý -> Chỉ Khóa thời gian Bắt đầu, Mở thời gian Kết thúc[cite: 22]
-                    mStartInput.style.display = 'none';
-                    mStartTxt.style.display = 'flex';
-                    mStartTxt.innerText = startStr;
-
-                    mEndInput.style.display = 'block';
-                    mEndTxt.style.display = 'none';
-                    endPicker.setDate(info.event.end || info.event.start);
                 } else {
-                    // Task Chưa bắt đầu -> Mở khóa cả 2
-                    mStartInput.style.display = 'block';
-                    mEndInput.style.display = 'block';
-                    mStartTxt.style.display = 'none';
-                    mEndTxt.style.display = 'none';
-                    startPicker.setDate(info.event.start);
-                    endPicker.setDate(info.event.end || info.event.start);
+                    document.getElementById('m_title').readOnly = false;
+                    document.getElementById('m_description').readOnly = false;
+                    mCompleted.disabled = false;
+                    submitBtn.style.display = 'flex'; // Hiện lại nút lưu
+
+                    if (isDone) {
+                        mStartInput.style.display = 'none';
+                        mEndInput.style.display = 'none';
+                        mStartTxt.style.display = 'flex';
+                        mEndTxt.style.display = 'flex';
+                        mStartTxt.innerText = startStr;
+                        mEndTxt.innerText = endStr;
+                    } else if (isProcessing) {
+                        mStartInput.style.display = 'none';
+                        mStartTxt.style.display = 'flex';
+                        mStartTxt.innerText = startStr;
+
+                        mEndInput.style.display = 'block';
+                        mEndTxt.style.display = 'none';
+                        endPicker.setDate(info.event.end || info.event.start);
+                    } else {
+                        mStartInput.style.display = 'block';
+                        mEndInput.style.display = 'block';
+                        mStartTxt.style.display = 'none';
+                        mEndTxt.style.display = 'none';
+                        startPicker.setDate(info.event.start);
+                        endPicker.setDate(info.event.end || info.event.start);
+                    }
                 }
             },
 
@@ -282,6 +328,11 @@
                 taskForm.reset();
                 document.getElementById('m_id').value = "";
                 modal.style.display = 'block';
+
+                // Reset lại toàn bộ form về chế độ Edit cho task mới
+                document.getElementById('m_title').readOnly = false;
+                document.getElementById('m_description').readOnly = false;
+                submitBtn.style.display = 'flex';
 
                 mStartInput.style.display = 'block';
                 mEndInput.style.display = 'block';
